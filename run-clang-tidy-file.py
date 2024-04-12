@@ -244,6 +244,7 @@ def main():
                       'command line.')
   parser.add_argument('-quiet', action='store_true',
                       help='Run clang-tidy in quiet mode')
+  parser.add_argument('-exclude', dest='exclude_path', help='Does not run clang-tidy on specified files')
   args = parser.parse_args()
 
   db_path = 'compile_commands.json'
@@ -253,6 +254,16 @@ def main():
   else:
     # Find our database
     build_path = find_compilation_database(db_path)
+
+  if args.exclude_path is not None:
+    exclude_files = []
+    exclude_path = args.exclude_path
+    with open(exclude_path,mode='r') as csvfile:
+      exclude_files_csv = csv.reader(csvfile)
+      print('EXCLUDED FILES: ')
+      for file in exclude_files_csv:
+        print(file[0])
+        exclude_files.append(file[0])
 
   try:
     invocation = [args.clang_tidy_binary, '-list-checks']
@@ -307,6 +318,9 @@ def main():
     # Fill the queue with files.
     for name in files:
       if file_name_re.search(name):
+        if name in exclude_files:
+          print('found: ', name)
+        else:
           task_queue.put(name)
 
     # Wait for all threads to be done.
@@ -347,4 +361,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
